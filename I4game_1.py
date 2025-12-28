@@ -3,12 +3,13 @@ import json
 import os
 import random
 import binascii
-from streamlit_autorefresh import st_autorefresh
+import time
 
 # =========================
 # CONFIG
 # =========================
 ROOMS_FILE = "rooms.json"
+REFRESH_INTERVAL = 2  # seconds
 
 # =========================
 # HELPER FUNCTIONS
@@ -24,7 +25,6 @@ def save_rooms(rooms):
         json.dump(rooms, f, indent=2)
 
 def shuffle_assign(items, players):
-    """Shuffle items and assign to players (rotating)"""
     shuffled = items.copy()
     random.shuffle(shuffled)
     distributed = {}
@@ -39,21 +39,25 @@ if "room_code" not in st.session_state:
     st.session_state.room_code = ""
 if "player_name" not in st.session_state:
     st.session_state.player_name = ""
+if "last_refresh" not in st.session_state:
+    st.session_state.last_refresh = time.time()
 
 st.set_page_config(page_title="Gartic Telephone", layout="centered")
 st.title("🎨📞 Gartic Telephone Game")
 
 # =========================
-# AUTO REFRESH
+# AUTO REFRESH (simple workaround)
 # =========================
-st_autorefresh(interval=2000, key="room_refresh")  # refresh every 2s
+if time.time() - st.session_state.last_refresh > REFRESH_INTERVAL:
+    st.session_state.last_refresh = time.time()
+    st.experimental_rerun()
 
 # =========================
 # JOIN ROOM
 # =========================
 if st.session_state.room_code == "":
     room_code = st.text_input("Enter Room Code")
-    name = st.text_input("Enter Your Name")
+    name = st.text_input("Your Name")
 
     if st.button("Join Room"):
         if room_code and name:
@@ -109,13 +113,10 @@ if room["phase"] == "word":
     else:
         st.info("Waiting for other players to submit words...")
 
-    # All words submitted? Move to draw phase
     if len(room["submissions"]) == len(players):
-        # Assign words to other players
-        items = list(room["submissions"].items())  # [(player, word)]
+        items = list(room["submissions"].items())
         words_only = [word for _, word in items]
         distributed = shuffle_assign(words_only, players)
-
         room["current_items"] = distributed
         room["submissions"] = {}
         room["phase"] = "draw"
@@ -144,16 +145,13 @@ elif room["phase"] == "draw":
     else:
         st.info("Waiting for other players to submit drawings...")
 
-    # All drawings submitted? Move to guess phase
     if len(room["submissions"]) == len(players):
-        # Save drawings in chains
         for p, img_hex in room["submissions"].items():
             room["chains"][p].append({
                 "type": "drawing",
                 "value": img_hex
             })
 
-        # Redistribute drawings for guessing
         items = list(room["submissions"].items())
         drawings_only = [img for _, img in items]
         distributed = shuffle_assign(drawings_only, players)
@@ -189,7 +187,6 @@ elif room["phase"] == "guess":
     else:
         st.info("Waiting for other players to submit guesses...")
 
-    # All guesses submitted? Save and start new round
     if len(room["submissions"]) == len(players):
         for p, guess in room["submissions"].items():
             room["chains"][p].append({
@@ -199,10 +196,6 @@ elif room["phase"] == "guess":
 
         room["round"] += 1
         room["submissions"] = {}
-
-        # Check if we should continue or show results
-        # For simplicity, stop after each player has submitted one word and one guess
-        # Can extend to multiple rounds
         room["phase"] = "results"
         save_rooms(rooms)
         st.experimental_rerun()
