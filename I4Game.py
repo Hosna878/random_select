@@ -97,7 +97,7 @@ else:
 # Sidebar navigation
 # -----------------------
 page = st.sidebar.radio("🔹 Select Functionality / انتخاب عملکرد:", 
-                        ["Random Word/Sentence", "Add Word/Sentence", "Add List", "Random Letter/Number"])
+                        ["Random Word/Sentence", "Add Word/Sentence", "Add List", "Random Letter/Number","Play Game"])
 
 # -----------------------
 # Random Word/Sentence
@@ -239,3 +239,120 @@ elif page == "Random Letter/Number":
             f"background-color:{bg_color}; padding:25px; border-radius:15px; font-weight:bold;'>{random_item}</div>",
             unsafe_allow_html=True
         )
+        
+        
+# -----------------------
+# Multiplayer Word Game
+# -----------------------
+elif page == "Play Game":
+    st.subheader("🎲 Multiplayer Word Game")
+
+    # --- Setup groups ---
+    if "groups" not in st.session_state:
+        num_groups = st.number_input("Enter number of groups:", min_value=1, step=1, value=2)
+        if st.button("Start Game"):
+            st.session_state.groups = {f"Group {i+1}": 0 for i in range(num_groups)}
+            st.session_state.current_group = 0
+            st.session_state.current_item = ""
+            st.session_state.current_level = "simple"
+            st.session_state.current_type = "words"
+            st.session_state.started = True
+            st.session_state.round_played = {f"Group {i+1}": False for i in range(num_groups)}
+            st.session_state.used_items = []  # Track used items to avoid repetition
+        st.stop()
+
+    group_names = list(st.session_state.groups.keys())
+    current_group_name = group_names[st.session_state.current_group]
+    st.markdown(f"### 🟢 Current Turn: {current_group_name} | Score: {st.session_state.groups[current_group_name]}")
+
+    # --- Select level and type ---
+    col1, col2 = st.columns(2)
+    with col1:
+        level = st.radio("Level / سطح:", ("simple", "medium", "hard"),
+                         index=["simple","medium","hard"].index(st.session_state.current_level))
+    with col2:
+        item_type = st.radio("Type / نوع:", ("words", "sentences"),
+                             index=["words","sentences"].index(st.session_state.current_type))
+
+    st.session_state.current_level = level
+    st.session_state.current_type = item_type
+    items = words_dict[level][item_type]
+
+    if not items:
+        st.warning("No items for this level/type!")
+        st.stop()
+
+    # --- Pick a new word avoiding repeats ---
+    remaining_items = [item for item in items if item not in st.session_state.used_items]
+    if not remaining_items:  # Reset if all used
+        st.session_state.used_items = []
+        remaining_items = items.copy()
+
+    if st.session_state.current_item == "" or st.session_state.current_item not in remaining_items:
+        st.session_state.current_item = random.choice(remaining_items)
+        st.session_state.used_items.append(st.session_state.current_item)
+
+    # --- Display current word ---
+    text_color = random.choice(["#FF5733","#33FF57","#3380FF","#FF33EC","#FFC300"])
+    bg_color = random.choice(["#F0F8FF","#FFFACD","#E6E6FA","#F5F5DC","#FFE4E1"])
+    while text_color == bg_color:
+        bg_color = random.choice(["#F0F8FF","#FFFACD","#E6E6FA","#F5F5DC","#FFE4E1"])
+    st.markdown(
+        f"<div style='text-align:center; font-size:32px; color:{text_color}; "
+        f"background-color:{bg_color}; padding:25px; border-radius:15px; font-weight:bold;'>{st.session_state.current_item}</div>",
+        unsafe_allow_html=True
+    )
+
+    # --- Action buttons ---
+    col1, col2, col3, col4 = st.columns([1,1,1,1])
+    with col1:
+        if st.button("✅ Got it!"):
+            if level == "simple":
+                st.session_state.groups[current_group_name] += 1
+            elif level == "medium":
+                st.session_state.groups[current_group_name] += 2
+            else:
+                st.session_state.groups[current_group_name] += 3
+            # Pick a new unused word
+            remaining_items = [item for item in items if item not in st.session_state.used_items]
+            if not remaining_items:
+                st.session_state.used_items = []
+                remaining_items = items.copy()
+            st.session_state.current_item = random.choice(remaining_items)
+            st.session_state.used_items.append(st.session_state.current_item)
+            st.session_state.round_played[current_group_name] = True
+
+    with col2:
+        if st.button("⏭ Skip"):
+            st.session_state.groups[current_group_name] -= 1
+            remaining_items = [item for item in items if item not in st.session_state.used_items]
+            if not remaining_items:
+                st.session_state.used_items = []
+                remaining_items = items.copy()
+            st.session_state.current_item = random.choice(remaining_items)
+            st.session_state.used_items.append(st.session_state.current_item)
+            st.session_state.round_played[current_group_name] = True
+
+    with col3:
+        if st.button("➡ Next Group"):
+            st.session_state.current_group = (st.session_state.current_group + 1) % len(group_names)
+            remaining_items = [item for item in items if item not in st.session_state.used_items]
+            if not remaining_items:
+                st.session_state.used_items = []
+                remaining_items = items.copy()
+            st.session_state.current_item = random.choice(remaining_items)
+            st.session_state.used_items.append(st.session_state.current_item)
+
+    # --- Finish Game button ---
+    if all(st.session_state.round_played.values()):
+        if st.button("🏁 Finish Game"):
+            st.success("🎉 Game Over! Final Scores:")
+            for g, s in st.session_state.groups.items():
+                st.write(f"{g}: {s}")
+            # Reset game
+            for key in ["groups","current_group","current_item","current_level","current_type","started","round_played","used_items"]:
+                del st.session_state[key]
+    else:
+        st.button("🏁 Finish Game (disabled, all groups must play this round)", disabled=True)
+
+
