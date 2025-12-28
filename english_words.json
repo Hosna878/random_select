@@ -1,0 +1,66 @@
+{
+    "simple": {
+        "words": [
+            "water",
+            "bread",
+            "flower",
+            "wind",
+            "light",
+            "night",
+            "day",
+            "hand",
+            "foot",
+            "eye",
+            "house",
+            "street"
+        ],
+        "sentences": [
+            "The sky is blue today",
+            "I love reading books",
+            "Yesterday I went to school",
+            "I am happy today",
+            "A bird sat on the tree",
+            "I ride my bike"
+        ]
+    },
+    "medium": {
+        "words": [
+            "bicycle",
+            "car",
+            "train",
+            "airplane",
+            "ship",
+            "garden",
+            "greenhouse",
+            "market"
+        ],
+        "sentences": [
+            "Math class was difficult today",
+            "Yesterday I went to a party",
+            "I am preparing for a trip",
+            "I talk with my friends",
+            "I ran in the park",
+            "My friend saw me"
+        ]
+    },
+    "hard": {
+        "words": [
+            "freedom",
+            "justice",
+            "faith",
+            "philosophy",
+            "logic",
+            "analysis",
+            "thinking",
+            "identity"
+        ],
+        "sentences": [
+            "Humans should live with wisdom",
+            "The world is full of complexity and conflict",
+            "Life gains meaning through effort and patience",
+            "Critical thinking is important for everyone",
+            "Human rights must be respected",
+            "Cultural analysis helps us understand society"
+        ]
+    }
+}
