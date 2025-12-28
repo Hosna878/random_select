@@ -50,7 +50,7 @@ st.title("🎨📞 Gartic Telephone Game")
 # =========================
 if time.time() - st.session_state.last_refresh > REFRESH_INTERVAL:
     st.session_state.last_refresh = time.time()
-    st.experimental_rerun()
+    st.rerun()
 
 # =========================
 # JOIN ROOM
@@ -79,7 +79,7 @@ if st.session_state.room_code == "":
             save_rooms(rooms)
             st.session_state.room_code = room_code
             st.session_state.player_name = name
-            st.experimental_rerun()
+            st.rerun()
     st.stop()
 
 # =========================
@@ -109,7 +109,7 @@ if room["phase"] == "word":
             if word.strip():
                 room["submissions"][player_name] = word.strip()
                 save_rooms(rooms)
-                st.experimental_rerun()
+                st.rerun()
     else:
         st.info("Waiting for other players to submit words...")
 
@@ -121,7 +121,7 @@ if room["phase"] == "word":
         room["submissions"] = {}
         room["phase"] = "draw"
         save_rooms(rooms)
-        st.experimental_rerun()
+        st.rerun()
 
 # =========================
 # DRAWING PHASE
@@ -141,7 +141,7 @@ elif room["phase"] == "draw":
             if upload:
                 room["submissions"][player_name] = upload.getvalue().hex()
                 save_rooms(rooms)
-                st.experimental_rerun()
+                st.rerun()
     else:
         st.info("Waiting for other players to submit drawings...")
 
@@ -160,7 +160,7 @@ elif room["phase"] == "draw":
         room["submissions"] = {}
         room["phase"] = "guess"
         save_rooms(rooms)
-        st.experimental_rerun()
+        st.rerun()
 
 # =========================
 # GUESSING PHASE
@@ -183,7 +183,7 @@ elif room["phase"] == "guess":
             if guess.strip():
                 room["submissions"][player_name] = guess.strip()
                 save_rooms(rooms)
-                st.experimental_rerun()
+                st.rerun()
     else:
         st.info("Waiting for other players to submit guesses...")
 
@@ -198,7 +198,7 @@ elif room["phase"] == "guess":
         room["submissions"] = {}
         room["phase"] = "results"
         save_rooms(rooms)
-        st.experimental_rerun()
+        st.rerun()
 
 # =========================
 # RESULTS
