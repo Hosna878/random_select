@@ -2,16 +2,16 @@ import streamlit as st
 import random
 import json
 import os
-from streamlit_drawable_canvas import st_canvas
+import binascii
 
-# -------------------------
-# Config
-# -------------------------
+# =========================
+# CONFIG
+# =========================
 ROOMS_FILE = "rooms.json"
 
-# -------------------------
-# Safe-ish Storage (no filelock)
-# -------------------------
+# =========================
+# STORAGE
+# =========================
 def load_rooms():
     if not os.path.exists(ROOMS_FILE):
         return {}
@@ -22,20 +22,20 @@ def save_rooms(rooms):
     with open(ROOMS_FILE, "w", encoding="utf-8") as f:
         json.dump(rooms, f, ensure_ascii=False, indent=2)
 
-# -------------------------
-# Session identity (per phone)
-# -------------------------
+# =========================
+# SESSION IDENTITY
+# =========================
 if "room_code" not in st.session_state:
     st.session_state.room_code = ""
 if "player_name" not in st.session_state:
     st.session_state.player_name = ""
 
 st.set_page_config(page_title="Gartic-Style Game", layout="centered")
-st.title("🎨📢 Gartic-Style Drawing & Guess Game")
+st.title("🎨📢 Multiplayer Drawing & Guess Game")
 
-# -------------------------
-# Join Room
-# -------------------------
+# =========================
+# JOIN ROOM
+# =========================
 if st.session_state.room_code == "":
     room_code = st.text_input("Room Code")
     player_name = st.text_input("Your Name")
@@ -49,7 +49,7 @@ if st.session_state.room_code == "":
                     "players": [],
                     "phase": "prompt",
                     "prompts": {},
-                    "drawing_queue": [],
+                    "draw_queue": [],
                     "guess_queue": [],
                     "results": []
                 }
@@ -64,9 +64,9 @@ if st.session_state.room_code == "":
             st.rerun()
     st.stop()
 
-# -------------------------
-# Load Room
-# -------------------------
+# =========================
+# LOAD ROOM
+# =========================
 rooms = load_rooms()
 room = rooms.get(st.session_state.room_code)
 
@@ -82,7 +82,7 @@ st.write("Players:", ", ".join(room["players"]))
 # ======================================================
 if room["phase"] == "prompt":
     if st.session_state.player_name not in room["prompts"]:
-        prompt = st.text_input("✍️ Enter your word / phrase")
+        prompt = st.text_input("✍️ Enter a word or phrase")
 
         if st.button("Submit Prompt"):
             if prompt.strip():
@@ -96,99 +96,8 @@ if room["phase"] == "prompt":
         prompts = list(room["prompts"].values())
         random.shuffle(prompts)
 
-        room["drawing_queue"] = []
+        room["draw_queue"] = []
         for i, prompt in enumerate(prompts):
             drawer = room["players"][i % len(room["players"])]
-            room["drawing_queue"].append({
-                "prompt": prompt,
-                "drawer": drawer
-            })
-
-        room["phase"] = "draw"
-        save_rooms(rooms)
-        st.rerun()
-
-# ======================================================
-# DRAW PHASE
-# ======================================================
-elif room["phase"] == "draw":
-    my_task = None
-    for item in room["drawing_queue"]:
-        if item["drawer"] == st.session_state.player_name and "drawing" not in item:
-            my_task = item
-            break
-
-    if my_task:
-        st.subheader("🎨 Draw This")
-        st.markdown(f"**{my_task['prompt']}**")
-
-        canvas = st_canvas(
-            height=300,
-            width=400,
-            stroke_width=3,
-            stroke_color="#000000",
-            background_color="#FFFFFF",
-            drawing_mode="freedraw",
-            key=f"canvas_{st.session_state.player_name}"
-        )
-
-        if st.button("Submit Drawing"):
-            if canvas.image_data is not None:
-                my_task["drawing"] = canvas.image_data.tolist()
-                save_rooms(rooms)
-                st.rerun()
-    else:
-        st.info("Waiting for others to finish drawing...")
-
-    if all("drawing" in d for d in room["drawing_queue"]):
-        drawings = room["drawing_queue"].copy()
-        random.shuffle(drawings)
-
-        room["guess_queue"] = drawings
-        room["phase"] = "guess"
-        save_rooms(rooms)
-        st.rerun()
-
-# ======================================================
-# GUESS PHASE
-# ======================================================
-elif room["phase"] == "guess":
-    my_guess = None
-    for item in room["guess_queue"]:
-        if "guess" not in item:
-            my_guess = item
-            break
-
-    if my_guess:
-        st.subheader("🤔 Guess the Drawing")
-        st.image(my_guess["drawing"], width=400)
-        guess = st.text_input("Your guess")
-
-        if st.button("Submit Guess"):
-            if guess.strip():
-                my_guess["guess"] = guess.strip()
-                room["results"].append(my_guess)
-                save_rooms(rooms)
-                st.rerun()
-    else:
-        st.info("Waiting for others to guess...")
-
-    if len(room["results"]) == len(room["guess_queue"]):
-        room["phase"] = "results"
-        save_rooms(rooms)
-        st.rerun()
-
-# ======================================================
-# RESULTS
-# ======================================================
-elif room["phase"] == "results":
-    st.subheader("🏁 Final Results")
-
-    for i, r in enumerate(room["results"], 1):
-        st.markdown(f"### Round {i}")
-        st.write("📝 Prompt:", r["prompt"])
-        st.image(r["drawing"], width=300)
-        st.write("💬 Guess:", r["guess"])
-        st.markdown("---")
-
-    st.success("Game finished 🎉")
+            room["draw_queue"].append({
+                "pr
