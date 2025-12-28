@@ -1,8 +1,9 @@
 import streamlit as st
-import random
 import json
 import os
+import random
 import binascii
+from streamlit_autorefresh import st_autorefresh
 
 # =========================
 # CONFIG
@@ -10,7 +11,7 @@ import binascii
 ROOMS_FILE = "rooms.json"
 
 # =========================
-# STORAGE
+# HELPER FUNCTIONS
 # =========================
 def load_rooms():
     if not os.path.exists(ROOMS_FILE):
@@ -22,6 +23,15 @@ def save_rooms(rooms):
     with open(ROOMS_FILE, "w", encoding="utf-8") as f:
         json.dump(rooms, f, indent=2)
 
+def shuffle_assign(items, players):
+    """Shuffle items and assign to players (rotating)"""
+    shuffled = items.copy()
+    random.shuffle(shuffled)
+    distributed = {}
+    for i, player in enumerate(players):
+        distributed[player] = shuffled[i % len(players)]
+    return distributed
+
 # =========================
 # SESSION STATE
 # =========================
@@ -30,15 +40,20 @@ if "room_code" not in st.session_state:
 if "player_name" not in st.session_state:
     st.session_state.player_name = ""
 
-st.set_page_config(page_title="Gartic Telephone Game", layout="centered")
+st.set_page_config(page_title="Gartic Telephone", layout="centered")
 st.title("🎨📞 Gartic Telephone Game")
+
+# =========================
+# AUTO REFRESH
+# =========================
+st_autorefresh(interval=2000, key="room_refresh")  # refresh every 2s
 
 # =========================
 # JOIN ROOM
 # =========================
 if st.session_state.room_code == "":
-    room_code = st.text_input("Room Code")
-    name = st.text_input("Your Name")
+    room_code = st.text_input("Enter Room Code")
+    name = st.text_input("Enter Your Name")
 
     if st.button("Join Room"):
         if room_code and name:
@@ -48,165 +63,165 @@ if st.session_state.room_code == "":
                     "players": [],
                     "phase": "word",
                     "round": 0,
-                    "chains": {},       # player -> list of chains
-                    "submissions": {},  # current round submissions
-                    "current_items": {},# items to draw/guess this round
-                    "pool": []          # all items for future rounds
+                    "chains": {},       # player -> list of steps
+                    "submissions": {},
+                    "current_items": {} # task for each player
                 }
 
             if name not in rooms[room_code]["players"]:
                 rooms[room_code]["players"].append(name)
-
-            # Initialize chains for new player
-            if name not in rooms[room_code]["chains"]:
                 rooms[room_code]["chains"][name] = []
 
             save_rooms(rooms)
             st.session_state.room_code = room_code
             st.session_state.player_name = name
-            st.rerun()
+            st.experimental_rerun()
     st.stop()
 
 # =========================
 # LOAD ROOM
 # =========================
 rooms = load_rooms()
-room = rooms[st.session_state.room_code]
+room = rooms.get(st.session_state.room_code)
+if not room:
+    st.error("Room not found!")
+    st.stop()
+
 players = room["players"]
+player_name = st.session_state.player_name
 
 st.subheader(f"Room: {st.session_state.room_code}")
 st.write("Players:", ", ".join(players))
 st.write("Round:", room["round"] + 1)
+st.write("Phase:", room["phase"].capitalize())
 
 # =========================
-# HELPER: Shuffle without self-assignment
-# =========================
-def shuffle_no_self_assignment(players, items):
-    if len(players) < 2:
-        return {players[0]: items[0]}  # only one player
-    while True:
-        shuffled = items[:]
-        random.shuffle(shuffled)
-        if all(players[i] != shuffled[i]["owner"] for i in range(len(players))):
-            return {players[i]: shuffled[i] for i in range(len(players))}
-
-# =========================
-# WORD PHASE
+# WORD SUBMISSION PHASE
 # =========================
 if room["phase"] == "word":
-    if st.session_state.player_name not in room["submissions"]:
+    if player_name not in room["submissions"]:
         word = st.text_input("✍️ Enter a word or phrase")
         if st.button("Submit Word"):
             if word.strip():
-                room["submissions"][st.session_state.player_name] = {
-                    "type": "word",
-                    "value": word.strip(),
-                    "owner": st.session_state.player_name,
-                    "history": [word.strip()]  # history starts with original word
-                }
+                room["submissions"][player_name] = word.strip()
                 save_rooms(rooms)
-                st.rerun()
+                st.experimental_rerun()
     else:
-        st.success("Waiting for others to submit words...")
+        st.info("Waiting for other players to submit words...")
 
+    # All words submitted? Move to draw phase
     if len(room["submissions"]) == len(players):
-        # Add new words to pool
-        room["pool"].extend(room["submissions"].values())
+        # Assign words to other players
+        items = list(room["submissions"].items())  # [(player, word)]
+        words_only = [word for _, word in items]
+        distributed = shuffle_assign(words_only, players)
 
-        # Shuffle pool and distribute for drawing
-        distributed = shuffle_no_self_assignment(players, room["pool"])
         room["current_items"] = distributed
         room["submissions"] = {}
         room["phase"] = "draw"
         save_rooms(rooms)
-        st.rerun()
+        st.experimental_rerun()
 
 # =========================
-# DRAW PHASE
+# DRAWING PHASE
 # =========================
 elif room["phase"] == "draw":
-    task = room["current_items"][st.session_state.player_name]
-    if st.session_state.player_name not in room["submissions"]:
-        st.subheader("🎨 Draw this")
-        st.markdown(f"**{task['history'][-1]}**")  # show last state (word or guess)
+    task = room["current_items"].get(player_name, None)
+    if task is None:
+        st.warning("Waiting for tasks to be assigned...")
+        st.stop()
 
-        upload = st.file_uploader("Upload drawing (PNG/JPG)", type=["png", "jpg", "jpeg"])
+    if player_name not in room["submissions"]:
+        st.subheader("🎨 Draw this word/phrase:")
+        st.markdown(f"**{task}**")
+
+        upload = st.file_uploader("Upload your drawing (PNG/JPG)", type=["png", "jpg", "jpeg"])
         if st.button("Submit Drawing"):
             if upload:
-                room["submissions"][st.session_state.player_name] = {
-                    "type": "drawing",
-                    "value": upload.getvalue().hex(),
-                    "owner": task["owner"],
-                    "history": task["history"] + ["drawing"]
-                }
+                room["submissions"][player_name] = upload.getvalue().hex()
                 save_rooms(rooms)
-                st.rerun()
+                st.experimental_rerun()
     else:
-        st.success("Waiting for others to submit drawings...")
+        st.info("Waiting for other players to submit drawings...")
 
+    # All drawings submitted? Move to guess phase
     if len(room["submissions"]) == len(players):
-        # Add drawings to chains and pool
-        for p, item in room["submissions"].items():
-            room["chains"][item["owner"]].append(item)
-            room["pool"].append(item)
+        # Save drawings in chains
+        for p, img_hex in room["submissions"].items():
+            room["chains"][p].append({
+                "type": "drawing",
+                "value": img_hex
+            })
 
-        # Shuffle pool for guessing
-        distributed = shuffle_no_self_assignment(players, room["pool"])
+        # Redistribute drawings for guessing
+        items = list(room["submissions"].items())
+        drawings_only = [img for _, img in items]
+        distributed = shuffle_assign(drawings_only, players)
+
         room["current_items"] = distributed
         room["submissions"] = {}
         room["phase"] = "guess"
         save_rooms(rooms)
-        st.rerun()
+        st.experimental_rerun()
 
 # =========================
-# GUESS PHASE
+# GUESSING PHASE
 # =========================
 elif room["phase"] == "guess":
-    task = room["current_items"][st.session_state.player_name]
-    img_hex = task["value"]
-    if st.session_state.player_name not in room["submissions"]:
-        st.subheader("🤔 Guess this drawing")
-        st.image(binascii.unhexlify(img_hex), width=400)
+    img_hex = room["current_items"].get(player_name, None)
+    if img_hex is None:
+        st.warning("Waiting for drawings to be assigned...")
+        st.stop()
+
+    if player_name not in room["submissions"]:
+        st.subheader("🤔 Guess this drawing:")
+        try:
+            st.image(binascii.unhexlify(img_hex), width=400)
+        except:
+            st.warning("Error displaying image. Maybe file corrupted.")
 
         guess = st.text_input("Your guess")
         if st.button("Submit Guess"):
             if guess.strip():
-                room["submissions"][st.session_state.player_name] = {
-                    "type": "guess",
-                    "value": guess.strip(),
-                    "owner": task["owner"],
-                    "history": task["history"] + [guess.strip()]
-                }
+                room["submissions"][player_name] = guess.strip()
                 save_rooms(rooms)
-                st.rerun()
+                st.experimental_rerun()
     else:
-        st.success("Waiting for others to submit guesses...")
+        st.info("Waiting for other players to submit guesses...")
 
+    # All guesses submitted? Save and start new round
     if len(room["submissions"]) == len(players):
-        # Add guesses to chains and pool
-        for p, item in room["submissions"].items():
-            room["chains"][item["owner"]].append(item)
-            room["pool"].append(item)
+        for p, guess in room["submissions"].items():
+            room["chains"][p].append({
+                "type": "guess",
+                "value": guess
+            })
 
         room["round"] += 1
         room["submissions"] = {}
-        room["phase"] = "word"
+
+        # Check if we should continue or show results
+        # For simplicity, stop after each player has submitted one word and one guess
+        # Can extend to multiple rounds
+        room["phase"] = "results"
         save_rooms(rooms)
-        st.rerun()
+        st.experimental_rerun()
 
 # =========================
-# RESULTS PHASE
+# RESULTS
 # =========================
 elif room["phase"] == "results":
-    st.subheader("🏁 Full Word Chains")
+    st.subheader("🏁 Game Results")
     for player, chain in room["chains"].items():
-        st.markdown(f"## 🔗 {player}'s Chain")
+        st.markdown(f"## 🔗 {player}'s Word Chain")
         for step in chain:
             if step["type"] == "drawing":
-                st.image(binascii.unhexlify(step["value"]), width=250)
+                try:
+                    st.image(binascii.unhexlify(step["value"]), width=250)
+                except:
+                    st.warning("Could not display image")
             else:
                 st.write("📝", step["value"])
-            # Show the history evolution
-            st.caption(" → ".join(str(h) for h in step["history"]))
         st.markdown("---")
+
     st.success("🎉 Game complete!")
