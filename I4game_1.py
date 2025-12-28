@@ -60,7 +60,7 @@ if st.session_state.room_code == "":
             save_rooms(rooms)
             st.session_state.room_code = room_code
             st.session_state.player_name = name
-            st.experimental_rerun()
+            st.rerun()
     st.stop()
 
 # =========================
@@ -96,7 +96,7 @@ if room["phase"] == "word":
             if word.strip():
                 room["submissions"][st.session_state.player_name] = word.strip()
                 save_rooms(rooms)
-                st.experimental_rerun()
+                st.rerun()
     else:
         st.success("Waiting for others to submit words...")
 
@@ -108,7 +108,7 @@ if room["phase"] == "word":
         room["submissions"] = {}
         room["phase"] = "draw"
         save_rooms(rooms)
-        st.experimental_rerun()
+        st.rerun()
 
 # =========================
 # DRAW PHASE
@@ -124,7 +124,7 @@ elif room["phase"] == "draw":
             if upload:
                 room["submissions"][st.session_state.player_name] = upload.getvalue().hex()
                 save_rooms(rooms)
-                st.experimental_rerun()
+                st.rerun()
     else:
         st.success("Waiting for others to submit drawings...")
 
@@ -140,7 +140,7 @@ elif room["phase"] == "draw":
         room["submissions"] = {}
         room["phase"] = "guess"
         save_rooms(rooms)
-        st.experimental_rerun()
+        st.rerun()
 
 # =========================
 # GUESS PHASE
@@ -156,7 +156,7 @@ elif room["phase"] == "guess":
             if guess.strip():
                 room["submissions"][st.session_state.player_name] = guess.strip()
                 save_rooms(rooms)
-                st.experimental_rerun()
+                st.rerun()
     else:
         st.success("Waiting for others to submit guesses...")
 
@@ -175,7 +175,7 @@ elif room["phase"] == "guess":
             room["phase"] = "word"
             room["current_items"] = {}
         save_rooms(rooms)
-        st.experimental_rerun()
+        st.rerun()
 
 # =========================
 # RESULTS PHASE
