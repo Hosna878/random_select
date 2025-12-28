@@ -205,3 +205,8 @@ elif room["phase"] == "results":
             if step["type"] == "drawing":
                 st.image(binascii.unhexlify(step["value"]), width=250)
             else:
+                st.write("📝", step["value"])
+            # Show the history evolution
+            st.caption(" → ".join(str(h) for h in step["history"]))
+        st.markdown("---")
+    st.success("🎉 Game complete!")
