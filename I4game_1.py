@@ -65,7 +65,7 @@ if st.session_state.room_code == "":
 
             st.session_state.room_code = room_code
             st.session_state.player_name = player_name
-            st.experimental_rerun()
+            st.rerun()
     st.stop()
 
 # -------------------------
@@ -92,7 +92,7 @@ if room["phase"] == "prompt":
             if prompt.strip():
                 room["prompts"][st.session_state.player_name] = prompt.strip()
                 save_rooms(rooms)
-                st.experimental_rerun()
+                st.rerun()
     else:
         st.success("Prompt submitted. Waiting for others...")
 
@@ -112,7 +112,7 @@ if room["phase"] == "prompt":
 
         room["phase"] = "draw"
         save_rooms(rooms)
-        st.experimental_rerun()
+        st.rerun()
 
 # ======================================================
 # DRAW PHASE
@@ -142,7 +142,7 @@ elif room["phase"] == "draw":
             if canvas.image_data is not None:
                 my_task["drawing"] = canvas.image_data.tolist()
                 save_rooms(rooms)
-                st.experimental_rerun()
+                st.rerun()
     else:
         st.info("Waiting for others to finish drawing...")
 
@@ -153,7 +153,7 @@ elif room["phase"] == "draw":
         room["guess_queue"] = drawings
         room["phase"] = "guess"
         save_rooms(rooms)
-        st.experimental_rerun()
+        st.rerun()
 
 # ======================================================
 # GUESS PHASE
@@ -175,14 +175,14 @@ elif room["phase"] == "guess":
                 my_guess["guess"] = guess.strip()
                 room["results"].append(my_guess)
                 save_rooms(rooms)
-                st.experimental_rerun()
+                st.rerun()
     else:
         st.info("Waiting for others to guess...")
 
     if len(room["results"]) == len(room["guess_queue"]):
         room["phase"] = "results"
         save_rooms(rooms)
-        st.experimental_rerun()
+        st.rerun()
 
 # ======================================================
 # RESULTS
