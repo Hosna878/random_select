@@ -2,29 +2,25 @@ import streamlit as st
 import random
 import json
 import os
-from filelock import FileLock
 from streamlit_drawable_canvas import st_canvas
 
 # -------------------------
 # Config
 # -------------------------
 ROOMS_FILE = "rooms.json"
-LOCK_FILE = "rooms.lock"
 
 # -------------------------
-# Safe Storage
+# Safe-ish Storage (no filelock)
 # -------------------------
 def load_rooms():
-    with FileLock(LOCK_FILE):
-        if not os.path.exists(ROOMS_FILE):
-            return {}
-        with open(ROOMS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+    if not os.path.exists(ROOMS_FILE):
+        return {}
+    with open(ROOMS_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 def save_rooms(rooms):
-    with FileLock(LOCK_FILE):
-        with open(ROOMS_FILE, "w", encoding="utf-8") as f:
-            json.dump(rooms, f, ensure_ascii=False, indent=2)
+    with open(ROOMS_FILE, "w", encoding="utf-8") as f:
+        json.dump(rooms, f, ensure_ascii=False, indent=2)
 
 # -------------------------
 # Session identity (per phone)
@@ -96,9 +92,7 @@ if room["phase"] == "prompt":
     else:
         st.success("Prompt submitted. Waiting for others...")
 
-    # Host auto-advance
     if len(room["prompts"]) == len(room["players"]):
-        st.info("All prompts submitted. Drawing phase starting...")
         prompts = list(room["prompts"].values())
         random.shuffle(prompts)
 
@@ -135,7 +129,7 @@ elif room["phase"] == "draw":
             stroke_color="#000000",
             background_color="#FFFFFF",
             drawing_mode="freedraw",
-            key="canvas"
+            key=f"canvas_{st.session_state.player_name}"
         )
 
         if st.button("Submit Drawing"):
