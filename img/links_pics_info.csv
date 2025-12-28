@@ -1,0 +1,30 @@
+﻿topic,info,pic_path,link
+Topic Modeling,"Topic modeling is a type of statistical modeling used in natural language processing and machine learning to identify topics or themes within a large corpus of text data. It involves the use of algorithms to analyze patterns in text data and group similar words and phrases into clusters, which are then interpreted as topics.
+Topic modeling can be useful in a variety of applications, such as text classification, document clustering, and recommendation systems. One popular algorithm for topic modeling is Latent Dirichlet Allocation (LDA), which is a generative probabilistic model that assumes that each document is a mixture of several topics, and that each topic is a distribution over a fixed vocabulary of words.
+In practice, topic modeling involves several steps, including preprocessing the text data (e.g., tokenization, stemming, stopword removal), choosing the number of topics, running the algorithm to generate topic distributions, and interpreting the results. The results can be visualized as word clouds or topic networks to help understand the relationships between topics.
+Overall, topic modeling is a powerful technique for uncovering hidden structures and patterns within text data and can be useful in a wide range of industries and fields.
+Here is a table summarizing some of the top models used for topic modeling along with some information and references.",img/Topic Modeling.png,https://i4data-topics.streamlit.app/
+Text Matching,"Text classification is the process of automatically categorizing text into one or more predefined categories based on its content. 
+It is a fundamental task in NLP and has numerous applications, such as spam filtering, sentiment analysis, and topic classification. 
+To perform text classification, various machine learning algorithms can be used, including Naive Bayes, SVM, and deep learning models such as CNN and LSTM.
+Here is a table summarizing some of the top models used for text classification along with their features, advantages, and references.",img/Text Classification.png,https://i4data-tm.streamlit.app/
+Data Analysis,"Data analysis is the process of inspecting, cleaning, transforming, and modeling data with the goal of discovering useful information, informing conclusions, and supporting decision-making. It can be broken down into several stages:
+Data collection: gathering and compiling data from various sources.
+Data cleaning: identifying and dealing with missing or incorrect data.
+Data transformation: converting data into a usable format, such as normalization or data aggregation.
+Exploratory data analysis: using statistical methods and visualizations to identify patterns and relationships in the data.
+Statistical modeling: building models to make predictions or identify relationships between variables.
+Machine learning: using algorithms to automatically identify patterns in data and make predictions.
+Data visualization: presenting data in a visual format, such as graphs or charts, to help identify patterns and relationships.
+Overall, data analysis is a crucial component of data-driven decision making, enabling organizations to make more informed choices based on empirical evidence.",img/data analysis.png,https://i4data-da.streamlit.app/
+Job Info,"The National Occupational Classification (NOC) 2021 is based on a five-tiered hierarchical structure. The first level contains 10 broad occupational categories, the second level is made up of 45 major groups, the third level consists of 89 sub-major groups, the fourth level gathers 162 minor groups, and the last level comprises 516 unit groups.","img/noc_ds.png,img/onet_ds.png,img/esco_ds.png",https://i4data-job-info.streamlit.app/
+other,,,https://i4data-e.streamlit.app/
+Text Summarization,"Text summarization is a natural language processing (NLP) technique that involves automatically generating a concise and meaningful summary of a longer text document. The goal of text summarization is to extract the most important information from a document while preserving its original meaning.
+There are two main approaches to text summarization: extractive and abstractive. Extractive summarization involves selecting the most important sentences or phrases from the original document and combining them to create a summary. This approach is simpler and more straightforward but can result in summaries that are less coherent or coherent than summaries generated using the abstractive approach.
+Abstractive summarization, on the other hand, involves generating a summary that is not limited to the original document's wording or structure. It involves understanding the underlying meaning of the text and generating new text that accurately captures the essence of the document. Abstractive summarization can produce summaries that are more coherent and readable than extractive summarization, but it is more challenging to implement.
+There are several techniques used in text summarization, including statistical methods, deep learning, and natural language processing techniques such as named entity recognition and part-of-speech tagging. These techniques can be combined to generate high-quality summaries that accurately represent the original text while being concise and readable.
+Text summarization has numerous applications, including news summarization, document summarization, and summarization of social media posts. It can also be used in content generation, search engines, and personal assistants.",img/Text Sum.png,https://i4data-sum.streamlit.app/
+Data Analysis (Visual data),,,
+,,,
+,,,
+,,,

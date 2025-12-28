@@ -2,7 +2,14 @@ import streamlit as st
 import json
 import random
 import os
+from PIL import Image
+import base64
 
+# import plotly.express as px
+img = Image.open("img/I4Data.png")
+img_bio = Image.open("img/bio_photo.jpg")
+def show_text(text):
+    st.markdown(f'<p class="font">{text}</p>', unsafe_allow_html=True)
 # -----------------------
 # File paths
 # -----------------------
@@ -81,7 +88,7 @@ if "english_words" not in st.session_state:
 # -----------------------
 # Page setup
 # -----------------------
-st.set_page_config(page_title="Random Words/Sentences App", layout="wide")
+st.set_page_config(page_title="Random Words/Sentences App", layout="wide", page_icon=img)
 st.title("🎲 Random Words & Sentences Generator")
 
 # -----------------------
@@ -94,11 +101,11 @@ else:
     words_dict = st.session_state.english_words
 
 # -----------------------
-# Sidebar navigation
+# Sidebar navigation (updated)
 # -----------------------
 page = st.sidebar.radio("🔹 Select Functionality / انتخاب عملکرد:", 
-                        ["Random Word/Sentence", "Add Word/Sentence", "Add List", "Random Letter/Number","Play Game"])
-
+                        ["Random Word/Sentence", "Add Word/Sentence", "Add List", 
+                         "Random Letter/Number", "Play Game", "How to Use"])
 # -----------------------
 # Random Word/Sentence
 # -----------------------
@@ -356,3 +363,67 @@ elif page == "Play Game":
         st.button("🏁 Finish Game (disabled, all groups must play this round)", disabled=True)
 
 
+# -----------------------
+# How to Use / Instructions Page
+# -----------------------
+if page == "How to Use":
+    st.subheader("📖 How to Use This App")
+    st.markdown("""
+    Welcome to the **Random Words & Sentences Generator**! Here's how you can use each feature:
+
+    ### 1️⃣ Random Word/Sentence
+    - Select the **language**, **level** (simple, medium, hard), and **type** (word or sentence).
+    - Click **Generate Random** to get a word or sentence displayed in colorful style.
+
+    ### 2️⃣ Add Word/Sentence
+    - Enter a new word or sentence in the text box.
+    - Choose the **level** and **type**.
+    - Click **Add** to save it to your database. Duplicate entries are ignored.
+
+    ### 3️⃣ Add List
+    - Paste a list of words or sentences (comma or newline separated).
+    - Select the **level** and **type**.
+    - Click **Add List** to save multiple items at once.
+
+    ### 4️⃣ Random Letter/Number/Card
+    - Choose **Letter, Number, or Card**.
+    - For letters, select the language (Farsi or English).
+    - For numbers, choose min and max values.
+    - For cards, select the card language.
+    - Click **Generate** to see a random item.
+
+    ### 5️⃣ Multiplayer Word Game
+    - Enter the number of groups and click **Start Game**.
+    - Each group takes turns guessing words or sentences.
+    - Words are **never repeated** until all words in the selected level/type are used.
+    - Points are awarded based on difficulty:
+        - Simple: 1 point
+        - Medium: 2 points
+        - Hard: 3 points
+    - Use buttons:
+        - ✅ Got it! → Add points and show next word
+        - ⏭ Skip → Deduct a point and show next word
+        - ➡ Next Group → Move to the next group's turn
+    - Once all groups have played in a round, click **Finish Game** to see final scores.
+
+    ### Tips
+    - You can switch **language** anytime from the sidebar.
+    - Add new words or sentences to make the game more fun and challenging.
+    - Colors and background change randomly for a fun visual experience.
+    
+    ### Developer
+    Hosna Hamdieh
+    """)
+    st.image(img_bio, caption='Hosna Hamdieh')
+    url1 = "https://www.linkedin.com/in/hosna-hamdieh/"
+    text1 = "For more info go to my LinkeIn page"
+    url3 = "https://www.linkedin.com/company/i4data/"
+    text3 = "For more info about I4Data go to its LinkeIn page"
+    url2 = "https://www.youtube.com/@hosnahamdieh2813"
+    text2 = "To see demo of my works go to my YouTube"
+    st.markdown(f'<p class="font">{text1}</p>', unsafe_allow_html=True)   
+    st.write("check out this [link](%s)" % url1)
+    st.markdown(f'<p class="font">{text2}</p>', unsafe_allow_html=True)   
+    st.write("check out this [link](%s)" % url2)
+    st.markdown(f'<p class="font">{text3}</p>', unsafe_allow_html=True)   
+    st.write("check out this [link](%s)" % url3)
