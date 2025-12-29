@@ -63,9 +63,9 @@ if page == "Play Game":
                         "players": [],
                         "phase": "word",
                         "round": 0,
-                        "items": {},          # item_id -> chain
-                        "submissions": {},    # current round submissions
-                        "current_items": {}   # item assigned to each player
+                        "items": [],  # item-centric chains
+                        "submissions": {},  # player -> current submission
+                        "current_item": {}  # player -> item they should act on now
                     }
                 if name not in rooms[room_code]["players"]:
                     rooms[room_code]["players"].append(name)
@@ -81,7 +81,6 @@ if page == "Play Game":
     rooms = load_rooms()
     room = rooms[st.session_state.room_code]
     players = room["players"]
-
     st.subheader(f"Room: {st.session_state.room_code}")
     st.write("Players:", ", ".join(players))
     st.write("Round:", room["round"] + 1)
@@ -103,35 +102,24 @@ if page == "Play Game":
             word = st.text_input("✍️ Enter a word or phrase")
             if st.button("Submit Word"):
                 if word.strip():
-                    # Generate item ID
-                    item_id = f"{st.session_state.player_name}_0"
-                    # Add item chain
-                    room["items"][item_id] = {
-                        "origin_player": st.session_state.player_name,
-                        "chain": [{"type": "word", "value": word.strip()}]
-                    }
-                    # Assign word to current player for first drawing assignment
-                    room["current_items"][st.session_state.player_name] = {
-                        "item_id": item_id,
-                        "value": word.strip()
-                    }
                     room["submissions"][st.session_state.player_name] = word.strip()
+                    # Create a new item for this word
+                    room["items"].append({
+                        "original_player": st.session_state.player_name,
+                        "chain": [{"type": "word", "value": word.strip(), "player": st.session_state.player_name}],
+                        "remaining_players": [p for p in players if p != st.session_state.player_name]
+                    })
                     save_rooms(rooms)
                     st.rerun()
         else:
             st.success("Waiting for others to submit their words...")
 
-        # All players submitted → assign words to others for drawing
+        # All players submitted → assign first drawing tasks
         if len(room["submissions"]) == len(players):
-            items_list = list(room["current_items"].items())
-            random.shuffle(items_list)
-            distributed = {}
-            for i, (player, task) in enumerate(items_list):
-                distributed[player] = {
-                    "item_id": task["item_id"],
-                    "value": items_list[(i + 1) % len(items_list)][1]["value"]
-                }
-            room["current_items"] = distributed
+            for item in room["items"]:
+                # Assign first remaining player
+                next_player = item["remaining_players"].pop(0)
+                room["current_item"][next_player] = item
             room["submissions"] = {}
             room["phase"] = "draw"
             save_rooms(rooms)
@@ -141,38 +129,37 @@ if page == "Play Game":
     # DRAW PHASE
     # -------------------------
     elif room["phase"] == "draw":
-        task = room["current_items"][st.session_state.player_name]
+        item = room["current_item"][st.session_state.player_name]
         if st.session_state.player_name not in room["submissions"]:
             st.subheader("🎨 Draw This")
-            st.markdown(f"**{task['value']}**")
+            st.markdown(f"**{item['chain'][-1]['value']}**")
             upload = st.file_uploader("Upload drawing (PNG/JPG)", type=["png", "jpg", "jpeg"])
             if st.button("Submit Drawing"):
                 if upload:
                     drawing_bytes = upload.getvalue()
                     drawing_hex = binascii.hexlify(drawing_bytes).decode()
                     room["submissions"][st.session_state.player_name] = drawing_hex
-                    # Add drawing to item chain
-                    room["items"][task["item_id"]]["chain"].append({
-                        "type": "drawing",
-                        "value": drawing_hex,
-                        "player": st.session_state.player_name
-                    })
+                    # Append drawing to item chain
+                    item["chain"].append({"type": "drawing", "value": drawing_hex, "player": st.session_state.player_name})
                     save_rooms(rooms)
                     st.rerun()
         else:
             st.success("Waiting for others to submit drawings...")
 
-        # All drawings submitted → assign to others for guessing
-        if len(room["submissions"]) == len(players):
-            items_list = list(room["submissions"].items())
-            random.shuffle(items_list)
-            distributed = {}
-            for i, (player, drawing_hex) in enumerate(items_list):
-                item_id = room["current_items"][player]["item_id"]
-                distributed[player] = {"item_id": item_id, "value": drawing_hex}
-            room["current_items"] = distributed
+        # All drawings submitted → assign next players for guessing
+        if len(room["submissions"]) == len(room["current_item"]):
+            new_assignments = {}
+            for player, drawing_hex in room["submissions"].items():
+                item = room["current_item"][player]
+                if item["remaining_players"]:
+                    next_player = item["remaining_players"].pop(0)
+                    new_assignments[next_player] = item
+            room["current_item"] = new_assignments
             room["submissions"] = {}
-            room["phase"] = "guess"
+            if room["current_item"]:
+                room["phase"] = "guess"
+            else:
+                room["phase"] = "results"
             save_rooms(rooms)
             st.rerun()
 
@@ -180,37 +167,35 @@ if page == "Play Game":
     # GUESS PHASE
     # -------------------------
     elif room["phase"] == "guess":
-        task = room["current_items"][st.session_state.player_name]
-        img_hex = task["value"]
+        item = room["current_item"][st.session_state.player_name]
         if st.session_state.player_name not in room["submissions"]:
             st.subheader("🤔 Guess This Drawing")
-            st.image(binascii.unhexlify(img_hex), width=400)
+            st.image(binascii.unhexlify(item["chain"][-1]["value"]), width=400)
             guess = st.text_input("Your guess")
             if st.button("Submit Guess"):
                 if guess.strip():
                     room["submissions"][st.session_state.player_name] = guess.strip()
-                    # Add guess to item chain
-                    room["items"][task["item_id"]]["chain"].append({
-                        "type": "guess",
-                        "value": guess.strip(),
-                        "player": st.session_state.player_name
-                    })
+                    # Append guess to item chain
+                    item["chain"].append({"type": "guess", "value": guess.strip(), "player": st.session_state.player_name})
                     save_rooms(rooms)
                     st.rerun()
         else:
             st.success("Waiting for others to submit guesses...")
 
-        # All guesses submitted → assign as next drawing round
-        if len(room["submissions"]) == len(players):
-            items_list = list(room["submissions"].items())
-            random.shuffle(items_list)
-            distributed = {}
-            for i, (player, guess) in enumerate(items_list):
-                item_id = room["current_items"][player]["item_id"]
-                distributed[player] = {"item_id": item_id, "value": guess}
-            room["current_items"] = distributed
+        # All guesses submitted → assign next drawing or finish
+        if len(room["submissions"]) == len(room["current_item"]):
+            new_assignments = {}
+            for player, guess in room["submissions"].items():
+                item = room["current_item"][player]
+                if item["remaining_players"]:
+                    next_player = item["remaining_players"].pop(0)
+                    new_assignments[next_player] = item
+            room["current_item"] = new_assignments
             room["submissions"] = {}
-            room["phase"] = "draw"
+            if room["current_item"]:
+                room["phase"] = "draw"
+            else:
+                room["phase"] = "results"
             room["round"] += 1
             save_rooms(rooms)
             st.rerun()
@@ -219,17 +204,15 @@ if page == "Play Game":
     # RESULTS PHASE
     # -------------------------
     elif room["phase"] == "results":
-        st.subheader("🏁 Final Item Chains")
-        for item_id, item in room["items"].items():
-            st.markdown(f"## Word by {item['origin_player']}")
+        st.subheader("🏁 Final Chains")
+        for idx, item in enumerate(room["items']):
+            st.markdown(f"## 🔗 Item {idx + 1} (original word by {item['chain'][0]['player']})")
             for step in item["chain"]:
                 if step["type"] == "drawing":
                     st.image(binascii.unhexlify(step["value"]), width=250)
-                    st.write(f"🎨 {step['player']}")
-                elif step["type"] == "word":
-                    st.write(f"📝 {step['value']}")
-                elif step["type"] == "guess":
-                    st.write(f"🤔 {step['value']} ({step['player']})")
+                    st.write(f"Drawn by: {step['player']}")
+                else:
+                    st.write(f"📝 {step['value']} (by {step['player']})")
             st.markdown("---")
         st.success("🎉 Game complete!")
 
@@ -243,7 +226,7 @@ if page == "How to Use":
 2. **Word Phase**: Each player writes a secret word or phrase.
 3. **Draw Phase**: Each player receives another player’s word to draw.
 4. **Guess Phase**: Each player guesses the word based on another player’s drawing.
-5. **Rounds continue**: Guesses become the next words for drawing, alternating rounds.
+5. **Rounds continue**: Items go to players who haven’t handled them yet.
 6. **Game ends**: The first player who joined the room can click **End Game** to see all chains.
 7. **Results**: View each item's full word/drawing/guess chain to see how the original words transformed.
 """)
