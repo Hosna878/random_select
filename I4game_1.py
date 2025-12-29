@@ -30,8 +30,8 @@ if "room_code" not in st.session_state:
 if "player_name" not in st.session_state:
     st.session_state.player_name = ""
 
-st.set_page_config(page_title="Gartic Telephone Game", layout="centered")
-st.title("🎨📞 Gartic Telephone Game")
+st.set_page_config(page_title="I4Game", layout="centered")
+st.title("🎨📞 Guessing game")
 
 # =========================
 # JOIN ROOM
